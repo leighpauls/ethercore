@@ -1,6 +1,7 @@
 package com.leighpauls.ethercore.node;
 
 import com.leighpauls.ethercore.EtherClient;
+import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.value.AbstractValue;
 import com.leighpauls.ethercore.value.Value;
 
@@ -15,8 +16,8 @@ public class StructNode extends AbstractNode {
     private final HashMap<String, Value> mValues;
     private final StructReferenceValue mSelfReference;
 
-    public StructNode(EtherClient.EtherClientDelegate etherClientDelegate, UUID uuid) {
-        super(etherClientDelegate, uuid);
+    public StructNode(EtherClient.GraphDelegate graphDelegate, UUID uuid) {
+        super(graphDelegate, uuid);
         mValues = new HashMap<String, Value>();
         mSelfReference = new StructReferenceValue();
     }
@@ -35,16 +36,48 @@ public class StructNode extends AbstractNode {
 
     // mutation operations, protected by transaction restrictions
     public void put(String key, Value value) {
-        verifyNodeIsMutable();
-
-        // TODO: build the operation and put it in the transaction
-        mValues.put(key, value);
+        Put operation = new Put(getUUID(), key, value);
+        getGraphDelegate().applyOperation(operation);
     }
     public void remove(String key) {
-        verifyNodeIsMutable();
+        Remove operation = new Remove(getUUID(), key);
+        getGraphDelegate().applyOperation(operation);
+    }
 
-        // TODO: build the operation
-        mValues.remove(key);
+    public static class Put implements EtherOperation<StructNode> {
+        private final UUID mUUID;
+        private final String mKey;
+        private final Value mValue;
+
+        public Put(UUID uuid, String key, Value value) {
+            mUUID = uuid;
+            mKey = key;
+            mValue = value;
+        }
+
+        @Override
+        public StructNode apply(EtherClient.OperationDelegate delegate) {
+            StructNode target = (StructNode) delegate.getNode(mUUID);
+            target.mValues.put(mKey, mValue);
+            return target;
+        }
+    }
+
+    public static class Remove implements EtherOperation<StructNode> {
+        private final UUID mUUID;
+        private final String mKey;
+
+        public Remove(UUID uuid, String key) {
+            mUUID = uuid;
+            mKey = key;
+        }
+
+        @Override
+        public StructNode apply(EtherClient.OperationDelegate delegate) {
+            StructNode target = (StructNode) delegate.getNode(mUUID);
+            target.mValues.remove(mKey);
+            return target;
+        }
     }
 
     public class StructReferenceValue extends AbstractValue {

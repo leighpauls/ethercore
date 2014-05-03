@@ -1,6 +1,7 @@
 package com.leighpauls.ethercore.node;
 
 import com.leighpauls.ethercore.EtherClient;
+import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.value.AbstractValue;
 import com.leighpauls.ethercore.value.Value;
 
@@ -14,8 +15,8 @@ public class ListNode extends AbstractNode {
     private final ArrayList<Value> mValues;
     private final ListReferenceValue mSelfReference;
 
-    public ListNode(EtherClient.EtherClientDelegate etherClientDelegate, UUID uuid) {
-        super(etherClientDelegate, uuid);
+    public ListNode(EtherClient.GraphDelegate graphDelegate, UUID uuid) {
+        super(graphDelegate, uuid);
         mValues = new ArrayList<Value>();
         mSelfReference = new ListReferenceValue();
     }
@@ -34,16 +35,48 @@ public class ListNode extends AbstractNode {
 
     // mutation operations, protected by transaction restrictions
     public void insert(int index, Value value) {
-        verifyNodeIsMutable();
-
-        // TODO: build the operation and append it to the transaction
-        mValues.add(index, value);
+        Insert operation = new Insert(getUUID(), index, value);
+        getGraphDelegate().applyOperation(operation);
     }
     public void remove(int index) {
-        verifyNodeIsMutable();
+        Remove operation = new Remove(getUUID(), index);
+        getGraphDelegate().applyOperation(operation);
+    }
 
-        // TODO: build the operation and append it to the transaction
-        mValues.remove(index);
+    public static class Insert implements EtherOperation<ListNode> {
+        private final UUID mUUID;
+        private final int mIndex;
+        private final Value mValue;
+
+        public Insert(UUID uuid, int index, Value value) {
+            mUUID = uuid;
+            mIndex = index;
+            mValue = value;
+        }
+
+        @Override
+        public ListNode apply(EtherClient.OperationDelegate delegate) {
+            ListNode target = (ListNode) delegate.getNode(mUUID);
+            target.mValues.add(mIndex, mValue);
+            return target;
+        }
+    }
+
+    private static class Remove implements EtherOperation<ListNode> {
+        private final UUID mUUID;
+        private final int mIndex;
+
+        private Remove(UUID uuid, int index) {
+            mUUID = uuid;
+            mIndex = index;
+        }
+
+        @Override
+        public ListNode apply(EtherClient.OperationDelegate delegate) {
+            ListNode target = (ListNode) delegate.getNode(mUUID);
+            target.mValues.remove(mIndex);
+            return target;
+        }
     }
 
     public class ListReferenceValue extends AbstractValue {

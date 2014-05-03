@@ -1,9 +1,14 @@
 package com.leighpauls.ethercore;
 
+import com.google.common.collect.ImmutableList;
 import com.leighpauls.ethercore.except.EtherRuntimeException;
+import com.leighpauls.ethercore.except.MutationOutsideOfTransactionException;
 import com.leighpauls.ethercore.node.ListNode;
 import com.leighpauls.ethercore.node.Node;
 import com.leighpauls.ethercore.node.StructNode;
+import com.leighpauls.ethercore.operation.CreateList;
+import com.leighpauls.ethercore.operation.CreateStruct;
+import com.leighpauls.ethercore.operation.EtherOperation;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -15,17 +20,20 @@ import java.util.UUID;
 public class EtherClient {
     private final StructNode mSeedNode;
     private final HashMap<UUID, Node> mNodes;
-    private final EtherClientDelegate mDelegate;
+    private final GraphDelegate mGraphDelegate;
+    private final OperationDelegate mOperationDelegate;
 
-    private boolean mInTransaction;
+    private ImmutableList.Builder<EtherOperation<?>> mPendingTransaction;
 
     public EtherClient(URI seedNodeURI) {
-        mInTransaction = false;
-        mDelegate = new EtherClientDelegate();
+        mPendingTransaction = null;
+        mGraphDelegate = new GraphDelegate();
+        mOperationDelegate = new OperationDelegate();
 
         // TODO: load the nodes from the seed
         mNodes = new HashMap<UUID, Node>();
-        mSeedNode = makeStructNode();
+        mSeedNode = new StructNode(mGraphDelegate, UUID.randomUUID());
+        mNodes.put(mSeedNode.getUUID(), mSeedNode);
     }
 
     /**
@@ -41,38 +49,69 @@ public class EtherClient {
      * @return A newly created list node
      */
     public ListNode makeListNode() {
-        ListNode result = new ListNode(mDelegate, UUID.randomUUID());
-        mNodes.put(result.getUUID(), result);
-        return result;
+        CreateList operation = new CreateList(UUID.randomUUID());
+        return mGraphDelegate.applyOperation(operation);
     }
 
     /**
-     * Create a new Stuct Node
+     * Create a new Struct Node
      * @return A newly created struct node
      */
     public StructNode makeStructNode() {
-        StructNode result = new StructNode(mDelegate, UUID.randomUUID());
-        mNodes.put(result.getUUID(), result);
-        return result;
+        CreateStruct operation = new CreateStruct(UUID.randomUUID());
+        return mGraphDelegate.applyOperation(operation);
     }
 
+    /**
+     * All changes must be made from within the context of this call
+     * @param transactionInterface The transaction to evaluate which will make changes to the graph
+     */
     public void applyTransaction(EtherTransactionInterface transactionInterface) {
-        if (mInTransaction) {
+        if (mPendingTransaction != null) {
             throw new EtherRuntimeException(
                     "Tried to start a transaction while one is already active");
         }
-        mInTransaction = true;
-        // TODO: start recording mutations
+
+
+        mPendingTransaction = ImmutableList.builder();
         transactionInterface.executeTransaction();
-        // TODO: stop recording mutations, finalize the transactions
-        mInTransaction = false;
+
         // TODO: apply pending remote transactions, send the new local transaction
+        System.out.println("Executed transaction: " + mPendingTransaction.build());
+
+        mPendingTransaction = null;
     }
 
-    public class EtherClientDelegate {
-        private EtherClientDelegate() {}
-        public boolean isInTranaction() {
-            return mInTransaction;
+    /**
+     * Delegate exposing methods which the graph needs to talk back to the client
+     */
+    public class GraphDelegate {
+        private GraphDelegate() {}
+
+        public <T extends Node> T applyOperation(EtherOperation<T> operation) {
+            if (mPendingTransaction == null) {
+                throw new MutationOutsideOfTransactionException();
+            }
+            mPendingTransaction.add(operation);
+            return operation.apply(mOperationDelegate);
+        }
+    }
+
+    /**
+     * Delegate exposing methods needed by operations to apply changes to the graph
+     */
+    public class OperationDelegate {
+        private OperationDelegate() {}
+        public void addNode(UUID uuid, Node node) {
+            mNodes.put(uuid, node);
+        }
+
+        public GraphDelegate getNodeDelegate() {
+            return mGraphDelegate;
+        }
+
+        public Node getNode(UUID uuid) {
+            return mNodes.get(uuid);
         }
     }
 }
