@@ -1,7 +1,8 @@
 package com.leighpauls.ethercore.node;
 
-import com.leighpauls.ethercore.EtherClient;
+import com.leighpauls.ethercore.client.EtherClient;
 import com.leighpauls.ethercore.operation.EtherOperation;
+import com.leighpauls.ethercore.operation.NoOp;
 import com.leighpauls.ethercore.value.AbstractValue;
 import com.leighpauls.ethercore.value.Value;
 
@@ -43,39 +44,111 @@ public class ListNode extends AbstractNode {
         getGraphDelegate().applyOperation(operation);
     }
 
-    public static class Insert implements EtherOperation<ListNode> {
-        private final UUID mUUID;
+    public static class Insert implements EtherOperation {
+        private final UUID mTargetUUID;
         private final int mIndex;
         private final Value mValue;
 
         public Insert(UUID uuid, int index, Value value) {
-            mUUID = uuid;
+            mTargetUUID = uuid;
             mIndex = index;
             mValue = value;
         }
 
         @Override
-        public ListNode apply(EtherClient.OperationDelegate delegate) {
-            ListNode target = (ListNode) delegate.getNode(mUUID);
+        public void apply(EtherClient.OperationDelegate delegate) {
+            ListNode target = (ListNode) delegate.getNode(mTargetUUID);
             target.mValues.add(mIndex, mValue);
-            return target;
+        }
+
+        @Override
+        public EtherOperation transformOver(
+                EtherOperation remoteOperation,
+                boolean overrideRemote) {
+            if (remoteOperation instanceof Insert) {
+                return xformOverInsert((Insert) remoteOperation, overrideRemote);
+            } else if (remoteOperation instanceof Remove) {
+                return xformOverRemove((Remove) remoteOperation);
+            }
+            // no conflcit possible
+            return this;
+        }
+
+        private EtherOperation xformOverInsert(Insert remoteOperation, boolean overrideRemote) {
+            if (!remoteOperation.mTargetUUID.equals(remoteOperation.mTargetUUID)) {
+                return this;
+            }
+            if (remoteOperation.mIndex < mIndex
+                    || (remoteOperation.mIndex == mIndex && !overrideRemote)) {
+                // I've been shifted back one
+                return new Insert(mTargetUUID, mIndex + 1, mValue);
+            }
+            // I don't get moved
+            return this;
+        }
+
+        private EtherOperation xformOverRemove(Remove remoteOperation) {
+            if (!remoteOperation.mTargetUUID.equals(mTargetUUID)) {
+                return this;
+            }
+            if (remoteOperation.mIndex < mIndex) {
+                // I've been shifted forward one
+                return new Insert(mTargetUUID, mIndex - 1, mValue);
+            }
+            // I don't get moved
+            return this;
         }
     }
 
-    private static class Remove implements EtherOperation<ListNode> {
-        private final UUID mUUID;
+    private static class Remove implements EtherOperation {
+        private final UUID mTargetUUID;
         private final int mIndex;
 
         private Remove(UUID uuid, int index) {
-            mUUID = uuid;
+            mTargetUUID = uuid;
             mIndex = index;
         }
 
         @Override
-        public ListNode apply(EtherClient.OperationDelegate delegate) {
-            ListNode target = (ListNode) delegate.getNode(mUUID);
+        public void apply(EtherClient.OperationDelegate delegate) {
+            ListNode target = (ListNode) delegate.getNode(mTargetUUID);
             target.mValues.remove(mIndex);
-            return target;
+        }
+
+        @Override
+        public EtherOperation transformOver(
+                EtherOperation remoteOperation,
+                boolean overrideRemote) {
+            if (remoteOperation instanceof Insert) {
+                return xformOverInsert((Insert) remoteOperation);
+            } else if (remoteOperation instanceof Remove) {
+                return xformOverRemove((Remove) remoteOperation, overrideRemote);
+            }
+            // no conflict possible
+            return this;
+        }
+
+        private EtherOperation xformOverInsert(Insert remoteOperation) {
+            if (!remoteOperation.mTargetUUID.equals(mTargetUUID)) {
+                return this;
+            }
+            if (remoteOperation.mIndex <= mIndex) {
+                return new Remove(mTargetUUID, mIndex + 1);
+            }
+            return this;
+        }
+
+        private EtherOperation xformOverRemove(Remove remoteOperation, boolean overrideRemote) {
+            if (!remoteOperation.mTargetUUID.equals(mTargetUUID)) {
+                return this;
+            }
+            if (remoteOperation.mIndex == mIndex) {
+                return overrideRemote ? this : new NoOp();
+            }
+            if (remoteOperation.mIndex < mIndex) {
+                return new Remove(mTargetUUID, mIndex - 1);
+            }
+            return this;
         }
     }
 

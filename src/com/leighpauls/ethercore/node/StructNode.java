@@ -1,7 +1,8 @@
 package com.leighpauls.ethercore.node;
 
-import com.leighpauls.ethercore.EtherClient;
+import com.leighpauls.ethercore.client.EtherClient;
 import com.leighpauls.ethercore.operation.EtherOperation;
+import com.leighpauls.ethercore.operation.NoOp;
 import com.leighpauls.ethercore.value.AbstractValue;
 import com.leighpauls.ethercore.value.Value;
 
@@ -44,39 +45,88 @@ public class StructNode extends AbstractNode {
         getGraphDelegate().applyOperation(operation);
     }
 
-    public static class Put implements EtherOperation<StructNode> {
-        private final UUID mUUID;
+    public static class Put implements EtherOperation {
+        private final UUID mTargetUUID;
         private final String mKey;
         private final Value mValue;
 
         public Put(UUID uuid, String key, Value value) {
-            mUUID = uuid;
+            mTargetUUID = uuid;
             mKey = key;
             mValue = value;
         }
 
         @Override
-        public StructNode apply(EtherClient.OperationDelegate delegate) {
-            StructNode target = (StructNode) delegate.getNode(mUUID);
+        public void apply(EtherClient.OperationDelegate delegate) {
+            StructNode target = (StructNode) delegate.getNode(mTargetUUID);
             target.mValues.put(mKey, mValue);
-            return target;
+        }
+
+        @Override
+        public EtherOperation transformOver(
+                EtherOperation remoteOperation,
+                boolean overrideRemote) {
+            // only a Put can conflict with a Put
+            if (!(remoteOperation instanceof Put)) {
+                return this;
+            }
+            // is it non-conflicting or overriding
+            Put other = (Put)remoteOperation;
+            if ((!other.mTargetUUID.equals(mTargetUUID))
+                    || (!other.mKey.equals(mKey))
+                    || overrideRemote) {
+                return this;
+            }
+            // I was overridden
+            return new NoOp();
         }
     }
 
-    public static class Remove implements EtherOperation<StructNode> {
-        private final UUID mUUID;
+    public static class Remove implements EtherOperation {
+        private final UUID mTargetUUID;
         private final String mKey;
 
         public Remove(UUID uuid, String key) {
-            mUUID = uuid;
+            mTargetUUID = uuid;
             mKey = key;
         }
 
         @Override
-        public StructNode apply(EtherClient.OperationDelegate delegate) {
-            StructNode target = (StructNode) delegate.getNode(mUUID);
+        public void apply(EtherClient.OperationDelegate delegate) {
+            StructNode target = (StructNode) delegate.getNode(mTargetUUID);
             target.mValues.remove(mKey);
-            return target;
+        }
+
+        @Override
+        public EtherOperation transformOver(
+                EtherOperation remoteOperation,
+                boolean overrideRemote) {
+            if (remoteOperation instanceof Put) {
+                return xformOverPut((Put) remoteOperation);
+            } else if (remoteOperation instanceof Remove) {
+                return xformOverRemove((Remove) remoteOperation, overrideRemote);
+            }
+            // no conflict possible
+            return this;
+        }
+
+        private EtherOperation xformOverRemove(Remove remoteOperation, boolean overrideRemote) {
+            if ((!remoteOperation.mTargetUUID.equals(mTargetUUID))
+                    || (!remoteOperation.mKey.equals(mKey))
+                    || (overrideRemote)) {
+                return this;
+            }
+            // I'm being overridden
+            return new NoOp();
+        }
+
+        private EtherOperation xformOverPut(Put remoteOperation) {
+            if ((!remoteOperation.mTargetUUID.equals(mTargetUUID))
+                    || (!remoteOperation.mKey.equals(mKey))) {
+                return this;
+            }
+            // the remove will be done implicitly by the put
+            return new NoOp();
         }
     }
 

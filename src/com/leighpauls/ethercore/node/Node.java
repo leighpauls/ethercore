@@ -1,7 +1,5 @@
 package com.leighpauls.ethercore.node;
 
-import com.leighpauls.ethercore.EtherClient;
-
 import java.util.UUID;
 
 /**

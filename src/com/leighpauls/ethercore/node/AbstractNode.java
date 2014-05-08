@@ -1,7 +1,6 @@
 package com.leighpauls.ethercore.node;
 
-import com.leighpauls.ethercore.EtherClient;
-import com.leighpauls.ethercore.except.MutationOutsideOfTransactionException;
+import com.leighpauls.ethercore.client.EtherClient;
 
 import java.util.UUID;
 

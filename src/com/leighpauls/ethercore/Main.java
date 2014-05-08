@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore;
 
+import com.leighpauls.ethercore.client.EtherClient;
 import com.leighpauls.ethercore.node.ListNode;
 import com.leighpauls.ethercore.node.StructNode;
 import com.leighpauls.ethercore.value.*;
@@ -13,7 +14,7 @@ public class Main {
     public static void main(String[] args) {
         final EtherClient client;
         try {
-            client = new EtherClient(new URI("http://localhost:8888"));
+            client = new EtherClient(new URI("http://localhost:8888"), new Precedence(1));
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return;
@@ -21,7 +22,7 @@ public class Main {
 
         final StructNode seedNode = client.getSeedNode();
 
-        client.applyTransaction(new EtherTransactionInterface() {
+        client.applyLocalTransaction(new EtherTransactionInterface() {
             @Override
             public List<EtherEvent> executeTransaction() {
                 ListNode listNode = client.makeListNode();
