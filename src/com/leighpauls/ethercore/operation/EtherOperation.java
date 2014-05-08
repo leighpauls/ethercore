@@ -1,7 +1,6 @@
 package com.leighpauls.ethercore.operation;
 
 import com.leighpauls.ethercore.client.EtherClient;
-import com.leighpauls.ethercore.node.Node;
 
 /**
  * All operations (things that can mutate the tree) implement this

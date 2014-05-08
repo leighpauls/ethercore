@@ -2,16 +2,20 @@ package com.leighpauls.ethercore.client;
 
 import com.leighpauls.ethercore.except.EtherRuntimeException;
 
+import java.util.List;
+
 /**
  * Maintains the 2-dimensional history that a client needs to transform transactions down to the
  * most recent state
  */
 public class ClientHistory {
+    private boolean mPendingAck;
     private ClientState mNewestState;
     private ClientState mLastAppliedState;
     private ClientState mLatestRemoteEndState;
 
     public ClientHistory(ClientClock initialClock) {
+        mPendingAck = false;
         mNewestState = mLastAppliedState = mLatestRemoteEndState = new ClientState(initialClock);
     }
 
@@ -24,16 +28,21 @@ public class ClientHistory {
         if (ackedLocalClock != mLatestRemoteEndState.getClock().getLocalState() + 1) {
             throw new EtherRuntimeException("Got an ack for a local state other than the next one");
         }
+        if (!mPendingAck) {
+            throw new EtherRuntimeException("Got an ack when not expecting it");
+        }
         mLatestRemoteEndState = mLatestRemoteEndState.getLocalTransition().getEndState();
+        mPendingAck = false;
     }
 
     /**
      * Apply a transaction from the server to the local history.
-     * Remote transactions must be sequential with eachother in the plane of the last acked local
+     * Remote transactions must be sequential with each other in the plane of the last acked local
      * transaction.
      * @param transaction The remote transaction to apply
+     * @return The transformed transaction to apply locally
      */
-    public void applyRemoteTransaction(ClientTransaction transaction) {
+    public ClientTransaction applyRemoteTransaction(ClientTransaction transaction) {
         if (!transaction.getSourceClock().equals(mLatestRemoteEndState.getClock())) {
             throw new EtherRuntimeException(
                     "Got a remote transaction from an unknown source state");
@@ -63,6 +72,7 @@ public class ClientHistory {
         }
 
         mNewestState = mNewestState.getRemoteTransition().getEndState();
+        return transformationSource.getRemoteTransition().getTransaction();
     }
 
     /**
@@ -104,5 +114,18 @@ public class ClientHistory {
 
     public ClientClock getAppliedClock() {
         return mLastAppliedState.getClock();
+    }
+
+    /**
+     * Retrieve the next local transaction to be send to the server. Note that this is mutable and
+     * remove that transaction from the list of transactions that need to be sent
+     * @return The next local transaction to send, or null if no local transaction can be sent
+     */
+    public ClientTransaction dequeueUnsentLocalTransaction() {
+        if (mPendingAck || mLatestRemoteEndState == mNewestState) {
+            return null;
+        }
+        mPendingAck = true;
+        return mLatestRemoteEndState.getLocalTransition().getTransaction();
     }
 }

@@ -1,6 +1,7 @@
 package com.leighpauls.ethercore.client;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 import com.leighpauls.ethercore.EtherEvent;
 import com.leighpauls.ethercore.EtherTransactionInterface;
 import com.leighpauls.ethercore.Precedence;
@@ -13,7 +14,6 @@ import com.leighpauls.ethercore.operation.CreateList;
 import com.leighpauls.ethercore.operation.CreateStruct;
 import com.leighpauls.ethercore.operation.EtherOperation;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -22,28 +22,34 @@ import java.util.UUID;
  * Interface that all clients use to access their ether graph
  */
 public class EtherClient {
-    private final Precedence mPrecedence;
+    private final ClientNetworkListener mNetworkListener;
 
+    private final Precedence mPrecedence;
     private final StructNode mSeedNode;
     private final HashMap<UUID, Node> mNodes;
+
     private final GraphDelegate mGraphDelegate;
     private final OperationDelegate mOperationDelegate;
+
     private final ClientHistory mHistory;
 
     private ImmutableList.Builder<EtherOperation> mPendingTransaction;
 
-    public EtherClient(URI seedNodeURI, Precedence precedence) {
-        mPrecedence = precedence;
-
+    public EtherClient(ClientNetworkListener networkListener) {
+        mNetworkListener = networkListener;
         mPendingTransaction = null;
         mGraphDelegate = new GraphDelegate();
         mOperationDelegate = new OperationDelegate();
 
+        ClientInitializer initializer = networkListener.getInitializer(mGraphDelegate);
+        mPrecedence = initializer.getPrecedence();
+
         // TODO: load the nodes and clock state from the seed URI
-        mHistory = new ClientHistory(new ClientClock(0, 0));
-        mNodes = new HashMap<UUID, Node>();
-        mSeedNode = new StructNode(mGraphDelegate, UUID.randomUUID());
-        mNodes.put(mSeedNode.getUUID(), mSeedNode);
+        mHistory = new ClientHistory(initializer.getClientClock());
+        mNodes = Maps.newHashMap(initializer.getNodes());
+        mSeedNode = initializer.getSeedNode();
+
+        networkListener.onClientReady(new NetworkDelegate());
     }
 
     /**
@@ -80,7 +86,7 @@ public class EtherClient {
      * All changes must be made from within the context of this call
      * @param transactionInterface The transaction to evaluate which will make changes to the graph
      */
-    public synchronized void applyLocalTransaction(EtherTransactionInterface transactionInterface) {
+    public void applyLocalTransaction(EtherTransactionInterface transactionInterface) {
         if (mPendingTransaction != null) {
             throw new EtherRuntimeException(
                     "Tried to start a transaction while one is already active");
@@ -98,12 +104,15 @@ public class EtherClient {
         mHistory.applyLocalTransaction(transaction);
         mPendingTransaction = null;
 
-        // TODO: transform any pending remote transactions over the new transaction
+        trySendingLocalTransaction();
     }
 
-    private synchronized void applyRemoteTransaction(ClientTransaction transaction) {
-        // transform the remote transaction so that it's source matches the local clock
-
+    private void trySendingLocalTransaction() {
+        ClientTransaction pendingTransaction = mHistory.dequeueUnsentLocalTransaction();
+        if (pendingTransaction == null) {
+            return;
+        }
+        mNetworkListener.sendTransaction(pendingTransaction);
     }
 
     /**
@@ -125,8 +134,8 @@ public class EtherClient {
      * Delegate exposing methods needed by operations to apply changes to the graph
      */
     public class OperationDelegate {
-
         private OperationDelegate() {}
+
         public void addNode(UUID uuid, Node node) {
             mNodes.put(uuid, node);
         }
@@ -141,6 +150,20 @@ public class EtherClient {
 
         public ClientClock getClientClock() {
             return mHistory.getAppliedClock();
+        }
+    }
+
+    public class NetworkDelegate {
+        private NetworkDelegate() {}
+
+        public void deliverAck(int localClock) {
+            mHistory.applyServerAck(localClock);
+            trySendingLocalTransaction();
+        }
+
+        public void deliverRemoteTransaction(ClientTransaction transaction) {
+            ClientTransaction transformedTransaction = mHistory.applyRemoteTransaction(transaction);
+            transformedTransaction.apply(mOperationDelegate);
         }
     }
 }
