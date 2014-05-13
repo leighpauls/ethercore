@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore.client;
 
+import com.leighpauls.ethercore.Transaction;
 import com.leighpauls.ethercore.except.EtherRuntimeException;
 
 /**
@@ -28,30 +29,30 @@ public class ClientState {
         return mRemoteTransition;
     }
 
-    public void applyRemoteTransaction(ClientTransaction transaction) {
+    public void applyRemoteTransaction(Transaction transaction) {
         if (mRemoteTransition != null) {
             throw new EtherRuntimeException("Tried to overwrite a remote transaction");
         }
         mRemoteTransition = new Transition(transaction, new ClientState(mClock.nextRemoteState()));
     }
 
-    public void applyLocalTransaction(ClientTransaction transaction) {
+    public void applyLocalTransaction(Transaction transaction) {
         if (mLocalTransition != null) {
             throw new EtherRuntimeException("Tried to overwrite a local transaction");
         }
         mLocalTransition = new Transition(transaction, new ClientState(mClock.nextLocalState()));
     }
 
-    public class Transition {
-        private final ClientTransaction mTransaction;
+    public static class Transition {
+        private final Transaction mTransaction;
         private final ClientState mEndState;
 
-        private Transition(ClientTransaction transaction, ClientState endState) {
+        private Transition(Transaction transaction, ClientState endState) {
             mTransaction = transaction;
             mEndState = endState;
         }
 
-        public ClientTransaction getTransaction() {
+        public Transaction getTransaction() {
             return mTransaction;
         }
 

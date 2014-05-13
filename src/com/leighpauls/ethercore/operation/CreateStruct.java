@@ -1,6 +1,6 @@
 package com.leighpauls.ethercore.operation;
 
-import com.leighpauls.ethercore.client.EtherClient;
+import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.StructNode;
 
 import java.util.UUID;
@@ -16,8 +16,8 @@ public class CreateStruct implements EtherOperation {
     }
 
     @Override
-    public void apply(EtherClient.OperationDelegate delegate) {
-        StructNode result = new StructNode(delegate.getNodeDelegate(), mUUID);
+    public void apply(GraphDelegate delegate) {
+        StructNode result = new StructNode(delegate.getOperationDelegate(), mUUID);
         delegate.addNode(mUUID, result);
     }
 

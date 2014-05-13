@@ -1,6 +1,6 @@
 package com.leighpauls.ethercore.node;
 
-import com.leighpauls.ethercore.client.EtherClient;
+import com.leighpauls.ethercore.client.OperationDelegate;
 
 import java.util.UUID;
 
@@ -8,11 +8,11 @@ import java.util.UUID;
  * Abstract implementation of {@link Node}
  */
 public abstract class AbstractNode implements Node {
-    private final EtherClient.GraphDelegate mGraphDelegate;
+    private final OperationDelegate mOperationDelegate;
     private final UUID mUUID;
 
-    protected AbstractNode(EtherClient.GraphDelegate graphDelegate, UUID uuid) {
-        mGraphDelegate = graphDelegate;
+    protected AbstractNode(OperationDelegate operationDelegate, UUID uuid) {
+        mOperationDelegate = operationDelegate;
         mUUID = uuid;
     }
 
@@ -21,7 +21,7 @@ public abstract class AbstractNode implements Node {
         return mUUID;
     }
 
-    protected EtherClient.GraphDelegate getGraphDelegate() {
-        return mGraphDelegate;
+    protected OperationDelegate getOperationDelegate() {
+        return mOperationDelegate;
     }
 }

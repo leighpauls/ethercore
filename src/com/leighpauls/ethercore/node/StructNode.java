@@ -1,6 +1,7 @@
 package com.leighpauls.ethercore.node;
 
-import com.leighpauls.ethercore.client.EtherClient;
+import com.leighpauls.ethercore.GraphDelegate;
+import com.leighpauls.ethercore.client.OperationDelegate;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.operation.NoOp;
 import com.leighpauls.ethercore.value.AbstractValue;
@@ -17,8 +18,8 @@ public class StructNode extends AbstractNode {
     private final HashMap<String, Value> mValues;
     private final StructReferenceValue mSelfReference;
 
-    public StructNode(EtherClient.GraphDelegate graphDelegate, UUID uuid) {
-        super(graphDelegate, uuid);
+    public StructNode(OperationDelegate operationDelegate, UUID uuid) {
+        super(operationDelegate, uuid);
         mValues = new HashMap<String, Value>();
         mSelfReference = new StructReferenceValue();
     }
@@ -38,11 +39,11 @@ public class StructNode extends AbstractNode {
     // mutation operations, protected by transaction restrictions
     public void put(String key, Value value) {
         Put operation = new Put(getUUID(), key, value);
-        getGraphDelegate().applyOperation(operation);
+        getOperationDelegate().applyOperation(operation);
     }
     public void remove(String key) {
         Remove operation = new Remove(getUUID(), key);
-        getGraphDelegate().applyOperation(operation);
+        getOperationDelegate().applyOperation(operation);
     }
 
     public static class Put implements EtherOperation {
@@ -57,7 +58,7 @@ public class StructNode extends AbstractNode {
         }
 
         @Override
-        public void apply(EtherClient.OperationDelegate delegate) {
+        public void apply(GraphDelegate delegate) {
             StructNode target = (StructNode) delegate.getNode(mTargetUUID);
             target.mValues.put(mKey, mValue);
         }
@@ -92,7 +93,7 @@ public class StructNode extends AbstractNode {
         }
 
         @Override
-        public void apply(EtherClient.OperationDelegate delegate) {
+        public void apply(GraphDelegate delegate) {
             StructNode target = (StructNode) delegate.getNode(mTargetUUID);
             target.mValues.remove(mKey);
         }

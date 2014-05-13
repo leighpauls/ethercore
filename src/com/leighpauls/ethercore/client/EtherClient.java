@@ -2,9 +2,10 @@ package com.leighpauls.ethercore.client;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import com.leighpauls.ethercore.EtherEvent;
 import com.leighpauls.ethercore.EtherTransactionInterface;
+import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.Precedence;
+import com.leighpauls.ethercore.Transaction;
 import com.leighpauls.ethercore.except.EtherRuntimeException;
 import com.leighpauls.ethercore.except.MutationOutsideOfTransactionException;
 import com.leighpauls.ethercore.node.ListNode;
@@ -15,7 +16,6 @@ import com.leighpauls.ethercore.operation.CreateStruct;
 import com.leighpauls.ethercore.operation.EtherOperation;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -28,8 +28,8 @@ public class EtherClient {
     private final StructNode mSeedNode;
     private final HashMap<UUID, Node> mNodes;
 
-    private final GraphDelegate mGraphDelegate;
     private final OperationDelegate mOperationDelegate;
+    private final GraphDelegate mGraphDelegate;
 
     private final ClientHistory mHistory;
 
@@ -38,10 +38,10 @@ public class EtherClient {
     public EtherClient(ClientNetworkListener networkListener) {
         mNetworkListener = networkListener;
         mPendingTransaction = null;
-        mGraphDelegate = new GraphDelegate();
-        mOperationDelegate = new OperationDelegate();
+        mOperationDelegate = new ClientOperationDelegate();
+        mGraphDelegate = new ClientGraphDelegate();
 
-        ClientInitializer initializer = networkListener.getInitializer(mGraphDelegate);
+        ClientInitializer initializer = networkListener.getInitializer(mOperationDelegate);
         mPrecedence = initializer.getPrecedence();
 
         // TODO: load the nodes and clock state from the seed URI
@@ -67,7 +67,7 @@ public class EtherClient {
     public ListNode makeListNode() {
         UUID uuid = UUID.randomUUID();
         CreateList operation = new CreateList(uuid);
-        mGraphDelegate.applyOperation(operation);
+        mOperationDelegate.applyOperation(operation);
         return (ListNode) mNodes.get(uuid);
     }
 
@@ -78,7 +78,7 @@ public class EtherClient {
     public StructNode makeStructNode() {
         UUID uuid = UUID.randomUUID();
         CreateStruct operation = new CreateStruct(uuid);
-        mGraphDelegate.applyOperation(operation);
+        mOperationDelegate.applyOperation(operation);
         return (StructNode) mNodes.get(uuid);
     }
 
@@ -93,14 +93,10 @@ public class EtherClient {
         }
 
         mPendingTransaction = ImmutableList.builder();
-        List<EtherEvent> events = transactionInterface.executeTransaction();
+        transactionInterface.executeTransaction();
 
         // finish up this transaction
-        ClientTransaction transaction = new ClientTransaction(
-                mPrecedence,
-                mHistory.getAppliedClock(),
-                mPendingTransaction.build(),
-                ImmutableList.copyOf(events));
+        Transaction transaction = new Transaction(mPrecedence, mPendingTransaction.build());
         mHistory.applyLocalTransaction(transaction);
         mPendingTransaction = null;
 
@@ -108,48 +104,42 @@ public class EtherClient {
     }
 
     private void trySendingLocalTransaction() {
-        ClientTransaction pendingTransaction = mHistory.dequeueUnsentLocalTransaction();
+        Transaction pendingTransaction = mHistory.dequeueUnsentLocalTransaction();
         if (pendingTransaction == null) {
             return;
         }
         mNetworkListener.sendTransaction(pendingTransaction);
     }
 
-    /**
-     * Delegate exposing methods which the graph needs to talk back to the client
-     */
-    public class GraphDelegate {
-        private GraphDelegate() {}
+    private class ClientOperationDelegate implements OperationDelegate {
+        private ClientOperationDelegate() {}
 
+        @Override
         public void applyOperation(EtherOperation operation) {
             if (mPendingTransaction == null) {
                 throw new MutationOutsideOfTransactionException();
             }
             mPendingTransaction.add(operation);
-            operation.apply(mOperationDelegate);
+            operation.apply(mGraphDelegate);
         }
     }
 
-    /**
-     * Delegate exposing methods needed by operations to apply changes to the graph
-     */
-    public class OperationDelegate {
-        private OperationDelegate() {}
+    private class ClientGraphDelegate implements GraphDelegate {
+        private ClientGraphDelegate() {}
 
+        @Override
         public void addNode(UUID uuid, Node node) {
             mNodes.put(uuid, node);
         }
 
-        public GraphDelegate getNodeDelegate() {
-            return mGraphDelegate;
+        @Override
+        public OperationDelegate getOperationDelegate() {
+            return mOperationDelegate;
         }
 
+        @Override
         public Node getNode(UUID uuid) {
             return mNodes.get(uuid);
-        }
-
-        public ClientClock getClientClock() {
-            return mHistory.getAppliedClock();
         }
     }
 
@@ -162,8 +152,8 @@ public class EtherClient {
         }
 
         public void deliverRemoteTransaction(ClientTransaction transaction) {
-            ClientTransaction transformedTransaction = mHistory.applyRemoteTransaction(transaction);
-            transformedTransaction.apply(mOperationDelegate);
+            Transaction transformedTransaction = mHistory.applyRemoteTransaction(transaction);
+            transformedTransaction.apply(mGraphDelegate);
         }
     }
 }

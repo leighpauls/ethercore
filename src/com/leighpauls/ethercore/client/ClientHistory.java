@@ -1,8 +1,7 @@
 package com.leighpauls.ethercore.client;
 
+import com.leighpauls.ethercore.Transaction;
 import com.leighpauls.ethercore.except.EtherRuntimeException;
-
-import java.util.List;
 
 /**
  * Maintains the 2-dimensional history that a client needs to transform transactions down to the
@@ -36,32 +35,32 @@ public class ClientHistory {
     }
 
     /**
-     * Apply a transaction from the server to the local history.
+     * Apply a remoteTransaction from the server to the local history.
      * Remote transactions must be sequential with each other in the plane of the last acked local
      * transaction.
-     * @param transaction The remote transaction to apply
-     * @return The transformed transaction to apply locally
+     * @param remoteTransaction The remote remoteTransaction to apply
+     * @return The transformed remoteTransaction to apply locally
      */
-    public ClientTransaction applyRemoteTransaction(ClientTransaction transaction) {
-        if (!transaction.getSourceClock().equals(mLatestRemoteEndState.getClock())) {
+    public Transaction applyRemoteTransaction(ClientTransaction remoteTransaction) {
+        if (!remoteTransaction.getSourceClock().equals(mLatestRemoteEndState.getClock())) {
             throw new EtherRuntimeException(
                     "Got a remote transaction from an unknown source state");
         }
 
-        mLatestRemoteEndState.applyRemoteTransaction(transaction);
+        mLatestRemoteEndState.applyRemoteTransaction(remoteTransaction.getTransaction());
         ClientState transformationSource = mLatestRemoteEndState;
         mLatestRemoteEndState = mLatestRemoteEndState.getRemoteTransition().getEndState();
 
-        // TODO: this could all be done in an alternate thread
         // transform this change up to the most recently applied state
         while (transformationSource != mNewestState) {
             ClientState.Transition localTransition = transformationSource.getLocalTransition();
             ClientState.Transition remoteTransition = transformationSource.getRemoteTransition();
 
-            ClientTransaction.TransactionPair transformedPair = ClientTransaction.transform(
-                    new ClientTransaction.TransactionPair(
+            Transaction.TransactionPair transformedPair = Transaction.transform(
+                    new Transaction.TransactionPair(
                             localTransition.getTransaction(),
-                            remoteTransition.getTransaction()));
+                            remoteTransition.getTransaction())
+            );
 
             // apply the transformed transactions
             localTransition.getEndState().applyRemoteTransaction(transformedPair.remote);
@@ -80,12 +79,7 @@ public class ClientHistory {
      * Local transactions are applied serially in the axis of the last applied remote transaction.
      * @param transaction The local transaction to apply
      */
-    public void applyLocalTransaction(ClientTransaction transaction) {
-        if (!transaction.getSourceClock().equals(mLastAppliedState.getClock())) {
-            throw new EtherRuntimeException(
-                    "Applying a local transition that doesn't come from the current state");
-        }
-
+    public void applyLocalTransaction(Transaction transaction) {
         mLastAppliedState.applyLocalTransaction(transaction);
         ClientState transformationSource = mLastAppliedState;
         mLastAppliedState = mLatestRemoteEndState.getLocalTransition().getEndState();
@@ -96,10 +90,11 @@ public class ClientHistory {
             ClientState.Transition localTransition = transformationSource.getLocalTransition();
             ClientState.Transition remoteTransition = transformationSource.getRemoteTransition();
 
-            ClientTransaction.TransactionPair transformedPair = ClientTransaction.transform(
-                    new ClientTransaction.TransactionPair(
+            Transaction.TransactionPair transformedPair = Transaction.transform(
+                    new Transaction.TransactionPair(
                             localTransition.getTransaction(),
-                            remoteTransition.getTransaction()));
+                            remoteTransition.getTransaction())
+            );
 
             // apply the transformed transactions
             localTransition.getEndState().applyRemoteTransaction(transformedPair.remote);
@@ -121,7 +116,7 @@ public class ClientHistory {
      * remove that transaction from the list of transactions that need to be sent
      * @return The next local transaction to send, or null if no local transaction can be sent
      */
-    public ClientTransaction dequeueUnsentLocalTransaction() {
+    public Transaction dequeueUnsentLocalTransaction() {
         if (mPendingAck || mLatestRemoteEndState == mNewestState) {
             return null;
         }

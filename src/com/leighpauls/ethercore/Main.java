@@ -9,8 +9,6 @@ import com.leighpauls.ethercore.node.StructNode;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.value.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 public class Main {
@@ -18,12 +16,12 @@ public class Main {
         final EtherClient.NetworkDelegate[] delegate = new EtherClient.NetworkDelegate[1];
         ClientNetworkListener networkListener = new ClientNetworkListener() {
             @Override
-            public void sendTransaction(ClientTransaction transaction) {
+            public void sendTransaction(Transaction transaction) {
                 System.out.println("Transaction: " + transaction);
             }
 
             @Override
-            public ClientInitializer getInitializer(EtherClient.GraphDelegate graphDelegate) {
+            public ClientInitializer getInitializer(OperationDelegate graphDelegate) {
                 StructNode seedNode = new StructNode(graphDelegate, UUID.randomUUID());
                 return new ClientInitializer(
                         new Precedence(1),
@@ -43,7 +41,7 @@ public class Main {
 
         client.applyLocalTransaction(new EtherTransactionInterface() {
             @Override
-            public List<EtherEvent> executeTransaction() {
+            public void executeTransaction() {
                 ListNode listNode = client.makeListNode();
                 seedNode.put("my_list", listNode.getReference());
                 seedNode.put("my_int", new IntegerValue(55));
@@ -51,22 +49,21 @@ public class Main {
 
                 listNode.insert(0, new StringValue("hello"));
                 listNode.insert(1, new StringValue("World!"));
-
-                return new ArrayList<EtherEvent>();
             }
         });
 
         delegate[0].deliverRemoteTransaction(
                 new ClientTransaction(
-                        new Precedence(2),
                         new ClientClock(0, 0),
-                        ImmutableList.<EtherOperation>of(
-                                new StructNode.Put(
-                                        seedNode.getUUID(),
-                                        "world",
-                                        new StringValue("Hola!"))),
-                        ImmutableList.<EtherEvent>of()));
+                        new Transaction(
+                                new Precedence(2),
+                                ImmutableList.<EtherOperation>of(
+                                        new StructNode.Put(
+                                                seedNode.getUUID(),
+                                                "world",
+                                                new StringValue("Hola!"))))));
 
         GraphCrawlingPrinter.printGraph(seedNode, 5);
     }
+
 }

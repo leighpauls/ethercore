@@ -1,6 +1,6 @@
 package com.leighpauls.ethercore.operation;
 
-import com.leighpauls.ethercore.client.EtherClient;
+import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.ListNode;
 
 import java.util.UUID;
@@ -16,8 +16,8 @@ public class CreateList implements EtherOperation {
     }
 
     @Override
-    public void apply(EtherClient.OperationDelegate delegate) {
-        ListNode result = new ListNode(delegate.getNodeDelegate(), mUUID);
+    public void apply(GraphDelegate delegate) {
+        ListNode result = new ListNode(delegate.getOperationDelegate(), mUUID);
         delegate.addNode(mUUID, result);
     }
 
