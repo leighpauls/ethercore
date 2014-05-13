@@ -57,6 +57,7 @@ public class ServerHistory {
         // apply the new transaction to the tip
         mTipState.applyTransaction(transformedTransaction, sourceClient);
         mTipState = mTipState.getTransition().getEndState();
+        mHistory.put(mTipState.getClock().getTotalState(), mTipState);
 
         return transformedTransaction;
     }

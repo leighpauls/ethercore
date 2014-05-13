@@ -45,7 +45,7 @@ public class ListNode extends AbstractNode {
 
     // mutation operations, protected by transaction restrictions
     public void insert(int index, Value value) {
-        Insert operation = new Insert(getUUID(), index, value);
+        Insert operation = new Insert(getUUID(), index, value.serializeValue());
         getOperationDelegate().applyOperation(operation);
     }
     public void remove(int index) {
@@ -61,18 +61,18 @@ public class ListNode extends AbstractNode {
     public static class Insert implements EtherOperation {
         private final UUID mTargetUUID;
         private final int mIndex;
-        private final Value mValue;
+        private final ValueData mValueData;
 
-        public Insert(UUID uuid, int index, Value value) {
+        public Insert(UUID uuid, int index, ValueData valueData) {
             mTargetUUID = uuid;
             mIndex = index;
-            mValue = value;
+            mValueData = valueData;
         }
 
         @Override
         public void apply(GraphDelegate delegate) {
             ListNode target = (ListNode) delegate.getNode(mTargetUUID);
-            target.mValues.add(mIndex, mValue);
+            target.mValues.add(mIndex, mValueData.recreate(delegate));
         }
 
         @Override
@@ -95,7 +95,7 @@ public class ListNode extends AbstractNode {
             if (remoteOperation.mIndex < mIndex
                     || (remoteOperation.mIndex == mIndex && !overrideRemote)) {
                 // I've been shifted back one
-                return new Insert(mTargetUUID, mIndex + 1, mValue);
+                return new Insert(mTargetUUID, mIndex + 1, mValueData);
             }
             // I don't get moved
             return this;
@@ -107,7 +107,7 @@ public class ListNode extends AbstractNode {
             }
             if (remoteOperation.mIndex < mIndex) {
                 // I've been shifted forward one
-                return new Insert(mTargetUUID, mIndex - 1, mValue);
+                return new Insert(mTargetUUID, mIndex - 1, mValueData);
             }
             // I don't get moved
             return this;

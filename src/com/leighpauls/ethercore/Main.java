@@ -16,6 +16,7 @@ public class Main {
     public static void main(String[] args) {
         EtherServer server = new EtherServer();
         final EtherClient client = ImmediateConnection.connect(server);
+        final EtherClient clientB = ImmediateConnection.connect(server);
 
         final StructNode seedNode = client.getSeedNode();
 
@@ -32,7 +33,22 @@ public class Main {
             }
         });
 
+        final StructNode seedNodeB = clientB.getSeedNode();
+        clientB.applyLocalTransaction(new EtherTransactionInterface() {
+            @Override
+            public void executeTransaction() {
+                ListNode listNodeB = seedNodeB.get("my_list").asListReference();
+                listNodeB.insert(1, new IntegerValue(12));
+
+                System.out.println("Before B's commit:");
+                GraphCrawlingPrinter.printGraph(seedNode, 5);
+                GraphCrawlingPrinter.printGraph(seedNodeB, 5);
+            }
+        });
+
+        System.out.println("After B's commit:");
         GraphCrawlingPrinter.printGraph(seedNode, 5);
+        GraphCrawlingPrinter.printGraph(seedNodeB, 5);
     }
 
 }

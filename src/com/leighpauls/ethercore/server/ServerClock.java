@@ -56,4 +56,8 @@ public class ServerClock {
         }
         return new ClientClock(localState, mTotalState - localState);
     }
+
+    public Integer getTotalState() {
+        return mTotalState;
+    }
 }

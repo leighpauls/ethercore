@@ -49,7 +49,7 @@ public class ListReferenceValue extends AbstractValue {
 
     @Override
     public ValueData serializeValue() {
-        return null;
+        return new ListReferenceValueData(mUUID);
     }
 
     private static class ListReferenceValueData implements ValueData {

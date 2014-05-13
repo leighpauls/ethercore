@@ -76,17 +76,17 @@ public class EtherServer {
 
         public void applyTransaction(ClientTransaction transaction) {
             // transform the transaction down to the current state and apply the transaction
+            ServerClock tipClock = mHistory.getTipClock();
             Transaction transformedTransaction =
                     mHistory.applyClientTransaction(transaction, mClientUUID);
             transformedTransaction.apply(mGraphDelegate);
-            ServerClock tipClock = mHistory.getTipClock();
 
             // tell the other clients about the transaction
             for (Map.Entry<UUID, PersistentNetworkClient> client : mClients.entrySet()) {
                 UUID clientUUID = client.getKey();
                 if (clientUUID.equals(mClientUUID)) {
                     // ack back to the originating client
-                    client.getValue().sendAck(tipClock.forClient(clientUUID).getLocalState());
+                    client.getValue().sendAck(tipClock.forClient(clientUUID).getLocalState() + 1);
                     continue;
                 }
                 // send the transaction to other clients

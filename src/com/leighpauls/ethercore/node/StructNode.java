@@ -6,7 +6,6 @@ import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.operation.NoOp;
-import com.leighpauls.ethercore.value.AbstractValue;
 import com.leighpauls.ethercore.value.StructReferenceValue;
 import com.leighpauls.ethercore.value.Value;
 import com.leighpauls.ethercore.value.ValueData;
@@ -50,7 +49,7 @@ public class StructNode extends AbstractNode {
 
     // mutation operations, protected by transaction restrictions
     public void put(String key, Value value) {
-        Put operation = new Put(getUUID(), key, value);
+        Put operation = new Put(getUUID(), key, value.serializeValue());
         getOperationDelegate().applyOperation(operation);
     }
     public void remove(String key) {
@@ -66,18 +65,18 @@ public class StructNode extends AbstractNode {
     public static class Put implements EtherOperation {
         private final UUID mTargetUUID;
         private final String mKey;
-        private final Value mValue;
+        private final ValueData mValueData;
 
-        public Put(UUID uuid, String key, Value value) {
+        public Put(UUID uuid, String key, ValueData valueData) {
             mTargetUUID = uuid;
             mKey = key;
-            mValue = value;
+            mValueData = valueData;
         }
 
         @Override
         public void apply(GraphDelegate delegate) {
             StructNode target = (StructNode) delegate.getNode(mTargetUUID);
-            target.mValues.put(mKey, mValue);
+            target.mValues.put(mKey, mValueData.recreate(delegate));
         }
 
         @Override

@@ -9,13 +9,13 @@ import com.leighpauls.ethercore.except.EtherRuntimeException;
  */
 public class ClientHistory {
     private boolean mPendingAck;
-    private ClientState mNewestState;
+    private final ClientState mInitialState;
     private ClientState mLastAppliedState;
     private ClientState mLatestRemoteEndState;
 
     public ClientHistory(ClientClock initialClock) {
         mPendingAck = false;
-        mNewestState = mLastAppliedState = mLatestRemoteEndState = new ClientState(initialClock);
+        mInitialState = mLastAppliedState = mLatestRemoteEndState = new ClientState(initialClock);
     }
 
     /**
@@ -52,7 +52,7 @@ public class ClientHistory {
         mLatestRemoteEndState = mLatestRemoteEndState.getRemoteTransition().getEndState();
 
         // transform this change up to the most recently applied state
-        while (transformationSource != mNewestState) {
+        while (transformationSource != mLastAppliedState) {
             ClientState.Transition localTransition = transformationSource.getLocalTransition();
             ClientState.Transition remoteTransition = transformationSource.getRemoteTransition();
 
@@ -70,7 +70,7 @@ public class ClientHistory {
             transformationSource = localTransition.getEndState();
         }
 
-        mNewestState = mNewestState.getRemoteTransition().getEndState();
+        mLastAppliedState = mLastAppliedState.getRemoteTransition().getEndState();
         return transformationSource.getRemoteTransition().getTransaction();
     }
 
@@ -82,29 +82,7 @@ public class ClientHistory {
     public void applyLocalTransaction(Transaction transaction) {
         mLastAppliedState.applyLocalTransaction(transaction);
         ClientState transformationSource = mLastAppliedState;
-        mLastAppliedState = mLatestRemoteEndState.getLocalTransition().getEndState();
-
-        // TODO: this could all be done in an alternate thread
-        // transform this check up to the latest received remote transition's state
-        while (transformationSource != mNewestState) {
-            ClientState.Transition localTransition = transformationSource.getLocalTransition();
-            ClientState.Transition remoteTransition = transformationSource.getRemoteTransition();
-
-            Transaction.TransactionPair transformedPair = Transaction.transform(
-                    new Transaction.TransactionPair(
-                            localTransition.getTransaction(),
-                            remoteTransition.getTransaction())
-            );
-
-            // apply the transformed transactions
-            localTransition.getEndState().applyRemoteTransaction(transformedPair.remote);
-            remoteTransition.getEndState().applyLocalTransaction(transformedPair.local);
-
-            // next iteration
-            transformationSource = remoteTransition.getEndState();
-        }
-
-        mNewestState = mNewestState.getLocalTransition().getEndState();
+        mLastAppliedState = mLastAppliedState.getLocalTransition().getEndState();
     }
 
     public ClientClock getAppliedClock() {
@@ -117,7 +95,7 @@ public class ClientHistory {
      * @return The next local transaction to send, or null if no local transaction can be sent
      */
     public ClientTransaction dequeueUnsentLocalTransaction() {
-        if (mPendingAck || mLatestRemoteEndState == mNewestState) {
+        if (mPendingAck || mLatestRemoteEndState == mLastAppliedState) {
             return null;
         }
         mPendingAck = true;
