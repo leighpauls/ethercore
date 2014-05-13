@@ -40,11 +40,10 @@ public class EtherClient {
 
         ClientInitializer initializer = networkListener.getInitializer(mOperationDelegate);
         mPrecedence = initializer.getPrecedence();
-
-        // TODO: load the nodes and clock state from the seed URI
         mHistory = new ClientHistory(initializer.getClientClock());
-        mNodes = Maps.newHashMap(initializer.getNodes());
-        mSeedNode = initializer.getSeedNode();
+
+        mNodes = NodeSerializer.recreateNodes(initializer.getNodes(), mGraphDelegate);
+        mSeedNode = (StructNode) mNodes.get(initializer.getSeedNodeUUID());
 
         networkListener.onClientReady(new NetworkDelegate());
     }
@@ -101,7 +100,7 @@ public class EtherClient {
     }
 
     private void trySendingLocalTransaction() {
-        Transaction pendingTransaction = mHistory.dequeueUnsentLocalTransaction();
+        ClientTransaction pendingTransaction = mHistory.dequeueUnsentLocalTransaction();
         if (pendingTransaction == null) {
             return;
         }

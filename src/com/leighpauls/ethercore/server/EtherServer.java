@@ -27,6 +27,8 @@ public class EtherServer {
     private int mNextPrecedence;
     private int totalClock;
 
+    public static final UUID GOD_NODE_UUID = new UUID(0, 0);
+
     public EtherServer() {
         mNodes = Maps.newHashMap();
         mClients = Maps.newHashMap();
@@ -35,13 +37,16 @@ public class EtherServer {
         mGraphDelegate = new ServerGraphDelegate();
         mNextPrecedence = 0;
         totalClock = 0;
+
+        // initialize with a god node
+        mNodes.put(GOD_NODE_UUID, new StructNode(mOperationDelegate, GOD_NODE_UUID));
     }
 
     /**
      * Opens a new client connection (one that has never existed before)
      * @param client
      */
-    void openClientConnection(PersistentNetworkClient client) {
+    public void openClientConnection(PersistentNetworkClient client) {
         UUID clientUUID = client.getClientUUID();
         // TODO: handle re-opening past connections
         mClients.put(clientUUID, client);
@@ -53,10 +58,13 @@ public class EtherServer {
         if (!mNodes.containsKey(rootNodeUUID)) {
             throw new EtherRuntimeException("Asked for a root node which dosn't exist");
         }
-        StructNode seedNode = (StructNode) mNodes.get(rootNodeUUID);
 
         client.initialize(
-                new ClientInitializer(precedence, seedNode, mNodes, new ClientClock(0, totalClock)),
+                new ClientInitializer(
+                        precedence,
+                        rootNodeUUID,
+                        NodeSerializer.serializeNodes(mNodes.values()),
+                        new ClientClock(0, totalClock)),
                 new NetworkDelegate(clientUUID));
     }
 

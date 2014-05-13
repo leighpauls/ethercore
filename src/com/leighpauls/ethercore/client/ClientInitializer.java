@@ -1,10 +1,10 @@
 package com.leighpauls.ethercore.client;
 
+import com.google.common.collect.ImmutableSet;
 import com.leighpauls.ethercore.Precedence;
-import com.leighpauls.ethercore.node.Node;
+import com.leighpauls.ethercore.node.NodeData;
 import com.leighpauls.ethercore.node.StructNode;
 
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -12,17 +12,17 @@ import java.util.UUID;
  */
 public class ClientInitializer {
     private final Precedence mPrecedence;
-    private final StructNode mSeedNode;
-    private final Map<UUID, Node> mNodes;
+    private final UUID mSeedNodeUUID;
+    private final ImmutableSet<NodeData> mNodes;
     private final ClientClock mClientClock;
 
     public ClientInitializer(
             Precedence precedence,
-            StructNode seedNode,
-            Map<UUID, Node> nodes,
+            UUID seedNodeUUID,
+            ImmutableSet<NodeData> nodes,
             ClientClock clientClock) {
         mPrecedence = precedence;
-        mSeedNode = seedNode;
+        mSeedNodeUUID = seedNodeUUID;
         mNodes = nodes;
         mClientClock = clientClock;
     }
@@ -31,11 +31,11 @@ public class ClientInitializer {
         return mPrecedence;
     }
 
-    public StructNode getSeedNode() {
-        return mSeedNode;
+    public UUID getSeedNodeUUID() {
+        return mSeedNodeUUID;
     }
 
-    public Map<UUID, Node> getNodes() {
+    public ImmutableSet<NodeData> getNodes() {
         return mNodes;
     }
 

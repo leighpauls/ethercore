@@ -1,13 +1,18 @@
 package com.leighpauls.ethercore.node;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.operation.NoOp;
 import com.leighpauls.ethercore.value.AbstractValue;
+import com.leighpauls.ethercore.value.StructReferenceValue;
 import com.leighpauls.ethercore.value.Value;
+import com.leighpauls.ethercore.value.ValueData;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -19,9 +24,16 @@ public class StructNode extends AbstractNode {
     private final StructReferenceValue mSelfReference;
 
     public StructNode(OperationDelegate operationDelegate, UUID uuid) {
+        this(operationDelegate, uuid, Maps.<String, Value>newHashMap());
+    }
+
+    private StructNode(
+            OperationDelegate operationDelegate,
+            UUID uuid,
+            HashMap<String, Value> values) {
         super(operationDelegate, uuid);
-        mValues = new HashMap<String, Value>();
-        mSelfReference = new StructReferenceValue();
+        mValues = values;
+        mSelfReference = new StructReferenceValue(this);
     }
 
     public Value get(String key) {
@@ -44,6 +56,11 @@ public class StructNode extends AbstractNode {
     public void remove(String key) {
         Remove operation = new Remove(getUUID(), key);
         getOperationDelegate().applyOperation(operation);
+    }
+
+    @Override
+    public NodeData serializeNode() {
+        return new StructNodeData(this);
     }
 
     public static class Put implements EtherOperation {
@@ -131,17 +148,29 @@ public class StructNode extends AbstractNode {
         }
     }
 
-    public class StructReferenceValue extends AbstractValue {
-        private StructReferenceValue() {}
+    private static class StructNodeData implements NodeData {
+        private final UUID mUUID;
+        private final ImmutableMap<String, ValueData> mValues;
 
-        @Override
-        public Class<?> getRequiredClass() {
-            return StructNode.class;
+        public StructNodeData(StructNode structNode) {
+            mUUID = structNode.getUUID();
+
+            ImmutableMap.Builder<String, ValueData> builder = ImmutableMap.builder();
+            for (Map.Entry<String, Value> entry : structNode.mValues.entrySet()) {
+                builder.put(entry.getKey(), entry.getValue().serializeValue());
+            }
+            mValues = builder.build();
         }
 
         @Override
-        public StructNode asStructReference() {
-            return StructNode.this;
+        public Node recreate(GraphDelegate graphDelegate) {
+            HashMap<String, Value> values = Maps.newHashMap();
+            for (Map.Entry<String, ValueData> valueDataEntry : mValues.entrySet()) {
+                values.put(
+                        valueDataEntry.getKey(),
+                        valueDataEntry.getValue().recreate(graphDelegate));
+            }
+            return new StructNode(graphDelegate.getOperationDelegate(), mUUID, values);
         }
     }
 }

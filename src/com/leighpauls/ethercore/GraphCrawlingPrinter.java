@@ -24,9 +24,9 @@ public class GraphCrawlingPrinter {
             System.out.println(value.asInt());
         } else if (value instanceof StringValue) {
             System.out.println(value.asString());
-        } else if (value instanceof ListNode.ListReferenceValue) {
+        } else if (value instanceof ListReferenceValue) {
             printNode(value.asListReference(), maxDepth, curDepth);
-        }else if (value instanceof StructNode.StructReferenceValue) {
+        }else if (value instanceof StructReferenceValue) {
             printNode(value.asStructReference(), maxDepth, curDepth);
         }
     }

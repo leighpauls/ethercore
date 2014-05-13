@@ -116,11 +116,14 @@ public class ClientHistory {
      * remove that transaction from the list of transactions that need to be sent
      * @return The next local transaction to send, or null if no local transaction can be sent
      */
-    public Transaction dequeueUnsentLocalTransaction() {
+    public ClientTransaction dequeueUnsentLocalTransaction() {
         if (mPendingAck || mLatestRemoteEndState == mNewestState) {
             return null;
         }
         mPendingAck = true;
-        return mLatestRemoteEndState.getLocalTransition().getTransaction();
+
+        return new ClientTransaction(
+                mLatestRemoteEndState.getClock(),
+                mLatestRemoteEndState.getLocalTransition().getTransaction());
     }
 }

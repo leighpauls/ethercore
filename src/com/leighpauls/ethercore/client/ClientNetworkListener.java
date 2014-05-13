@@ -13,7 +13,7 @@ public interface ClientNetworkListener {
      * Called by the client to send a transaction
      * @param transaction
      */
-    void sendTransaction(Transaction transaction);
+    void sendTransaction(ClientTransaction transaction);
 
     /**
      * Called by the client when initializing

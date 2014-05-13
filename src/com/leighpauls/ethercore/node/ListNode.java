@@ -1,11 +1,15 @@
 package com.leighpauls.ethercore.node;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.operation.NoOp;
-import com.leighpauls.ethercore.value.AbstractValue;
+import com.leighpauls.ethercore.value.ListReferenceValue;
 import com.leighpauls.ethercore.value.Value;
+import com.leighpauls.ethercore.value.ValueData;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -18,9 +22,13 @@ public class ListNode extends AbstractNode {
     private final ListReferenceValue mSelfReference;
 
     public ListNode(OperationDelegate operationDelegate, UUID uuid) {
+        this(operationDelegate, uuid, Lists.<Value>newArrayList());
+    }
+
+    private ListNode(OperationDelegate operationDelegate, UUID uuid, ArrayList<Value> values) {
         super(operationDelegate, uuid);
-        mValues = new ArrayList<Value>();
-        mSelfReference = new ListReferenceValue();
+        mValues = values;
+        mSelfReference = new ListReferenceValue(this);
     }
 
     public Value get(int index) {
@@ -43,6 +51,11 @@ public class ListNode extends AbstractNode {
     public void remove(int index) {
         Remove operation = new Remove(getUUID(), index);
         getOperationDelegate().applyOperation(operation);
+    }
+
+    @Override
+    public NodeData serializeNode() {
+        return new ListNodeData(this);
     }
 
     public static class Insert implements EtherOperation {
@@ -153,17 +166,26 @@ public class ListNode extends AbstractNode {
         }
     }
 
-    public class ListReferenceValue extends AbstractValue {
-        private ListReferenceValue() {}
+    public static class ListNodeData implements NodeData {
+        private final UUID mUUID;
+        private final ImmutableList<ValueData> mValues;
 
-        @Override
-        public Class<?> getRequiredClass() {
-            return ListNode.class;
+        public ListNodeData(ListNode node) {
+            mUUID = node.getUUID();
+            ImmutableList.Builder<ValueData> builder = ImmutableList.builder();
+            for (Value value : node.mValues) {
+                builder.add(value.serializeValue());
+            }
+            mValues = builder.build();
         }
 
         @Override
-        public ListNode asListReference() {
-            return ListNode.this;
+        public Node recreate(GraphDelegate graphDelegate) {
+            ArrayList<Value> values = Lists.newArrayList();
+            for (ValueData valueData : mValues) {
+                values.add(valueData.recreate(graphDelegate));
+            }
+            return new ListNode(graphDelegate.getOperationDelegate(), mUUID, values);
         }
     }
 }

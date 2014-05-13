@@ -13,4 +13,6 @@ public interface Value {
 
     ListNode asListReference();
     StructNode asStructReference();
+
+    ValueData serializeValue();
 }
