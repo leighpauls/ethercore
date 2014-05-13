@@ -1,7 +1,8 @@
-package com.leighpauls.ethercore;
+package com.leighpauls.ethercore.server;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.leighpauls.ethercore.Transaction;
 import com.leighpauls.ethercore.client.ClientClock;
 import com.leighpauls.ethercore.client.ClientTransaction;
 import com.leighpauls.ethercore.except.EtherRuntimeException;

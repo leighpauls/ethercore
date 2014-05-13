@@ -1,4 +1,4 @@
-package com.leighpauls.ethercore;
+package com.leighpauls.ethercore.server;
 
 import com.google.common.collect.ImmutableMap;
 import com.leighpauls.ethercore.client.ClientClock;

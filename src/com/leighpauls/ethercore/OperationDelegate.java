@@ -1,4 +1,4 @@
-package com.leighpauls.ethercore.client;
+package com.leighpauls.ethercore;
 
 import com.leighpauls.ethercore.operation.EtherOperation;
 

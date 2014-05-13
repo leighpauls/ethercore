@@ -1,6 +1,5 @@
 package com.leighpauls.ethercore;
 
-import com.leighpauls.ethercore.client.OperationDelegate;
 import com.leighpauls.ethercore.node.Node;
 
 import java.util.UUID;

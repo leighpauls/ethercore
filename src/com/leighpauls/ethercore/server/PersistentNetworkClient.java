@@ -1,7 +1,8 @@
-package com.leighpauls.ethercore;
+package com.leighpauls.ethercore.server;
 
 import com.leighpauls.ethercore.client.ClientInitializer;
 import com.leighpauls.ethercore.client.ClientTransaction;
+import com.leighpauls.ethercore.server.EtherServer;
 
 import java.util.UUID;
 

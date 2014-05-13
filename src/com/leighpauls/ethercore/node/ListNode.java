@@ -1,7 +1,7 @@
 package com.leighpauls.ethercore.node;
 
 import com.leighpauls.ethercore.GraphDelegate;
-import com.leighpauls.ethercore.client.OperationDelegate;
+import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.operation.NoOp;
 import com.leighpauls.ethercore.value.AbstractValue;

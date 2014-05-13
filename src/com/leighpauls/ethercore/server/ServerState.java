@@ -1,5 +1,6 @@
-package com.leighpauls.ethercore;
+package com.leighpauls.ethercore.server;
 
+import com.leighpauls.ethercore.Transaction;
 import com.leighpauls.ethercore.except.EtherRuntimeException;
 
 import java.util.UUID;

@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore.client;
 
+import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.Transaction;
 
 /**
