@@ -9,13 +9,14 @@ import com.leighpauls.ethercore.except.EtherRuntimeException;
  */
 public class ClientHistory {
     private boolean mPendingAck;
-    private final ClientState mInitialState;
+    /** The current state of the local copy of the graph */
     private ClientState mLastAppliedState;
+    /** The latest state the the server is sure to know about */
     private ClientState mLatestRemoteEndState;
 
     public ClientHistory(ClientClock initialClock) {
         mPendingAck = false;
-        mInitialState = mLastAppliedState = mLatestRemoteEndState = new ClientState(initialClock);
+        mLastAppliedState = mLatestRemoteEndState = new ClientState(initialClock);
     }
 
     /**
@@ -81,12 +82,7 @@ public class ClientHistory {
      */
     public void applyLocalTransaction(Transaction transaction) {
         mLastAppliedState.applyLocalTransaction(transaction);
-        ClientState transformationSource = mLastAppliedState;
         mLastAppliedState = mLastAppliedState.getLocalTransition().getEndState();
-    }
-
-    public ClientClock getAppliedClock() {
-        return mLastAppliedState.getClock();
     }
 
     /**
