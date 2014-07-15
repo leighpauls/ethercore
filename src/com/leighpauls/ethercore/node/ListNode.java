@@ -2,15 +2,18 @@ package com.leighpauls.ethercore.node;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.operation.NoOp;
+import com.leighpauls.ethercore.util.SerializationUtils;
 import com.leighpauls.ethercore.value.ListReferenceValue;
 import com.leighpauls.ethercore.value.Value;
 import com.leighpauls.ethercore.value.ValueData;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -58,6 +61,53 @@ public class ListNode extends AbstractNode {
         return new ListNodeData(this);
     }
 
+    public static class ListNodeData implements NodeData {
+        private final UUID mUUID;
+        private final ImmutableList<ValueData> mValues;
+
+        public ListNodeData(ListNode node) {
+            mUUID = node.getUUID();
+            ImmutableList.Builder<ValueData> builder = ImmutableList.builder();
+            for (Value value : node.mValues) {
+                builder.add(value.serializeValue());
+            }
+            mValues = builder.build();
+        }
+
+        @Override
+        public Node recreate(GraphDelegate graphDelegate) {
+            ArrayList<Value> values = Lists.newArrayList();
+            for (ValueData valueData : mValues) {
+                values.add(valueData.recreate(graphDelegate));
+            }
+            return new ListNode(graphDelegate.getOperationDelegate(), mUUID, values);
+        }
+
+        public ListNodeData(DataInputStream inputStream) throws IOException {
+            mUUID = SerializationUtils.deserializeUUID(inputStream);
+
+            int numValues = inputStream.readInt();
+            ImmutableList.Builder<ValueData> builder = ImmutableList.builder();
+            for (int i = 0; i < numValues; ++i) {
+                builder.add(ValueDataSerializer.deserialize(inputStream));
+            }
+            mValues = builder.build();
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream output) throws IOException {
+            SerializationUtils.serializeUUID(mUUID, output);
+
+            output.writeInt(mValues.size());
+            for (ValueData value : mValues) {
+                ValueDataSerializer.serialize(value, output);
+            }
+        }
+    }
+
+    /**
+    * Operation to insert an element into a {@link ListNode}
+    */
     public static class Insert implements EtherOperation {
         private final UUID mTargetUUID;
         private final int mIndex;
@@ -84,8 +134,21 @@ public class ListNode extends AbstractNode {
             } else if (remoteOperation instanceof Remove) {
                 return xformOverRemove((Remove) remoteOperation);
             }
-            // no conflcit possible
+            // no conflict possible
             return this;
+        }
+
+        public Insert(DataInputStream inputStream) throws IOException {
+            mTargetUUID = SerializationUtils.deserializeUUID(inputStream);
+            mIndex = inputStream.readInt();
+            mValueData = ValueDataSerializer.deserialize(inputStream);
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream outputStream) throws IOException {
+            SerializationUtils.serializeUUID(mTargetUUID, outputStream);
+            outputStream.writeInt(mIndex);
+            ValueDataSerializer.serialize(mValueData, outputStream);
         }
 
         private EtherOperation xformOverInsert(Insert remoteOperation, boolean overrideRemote) {
@@ -114,11 +177,14 @@ public class ListNode extends AbstractNode {
         }
     }
 
-    private static class Remove implements EtherOperation {
+    /**
+    * Operation to remove an element from a {@link ListNode}
+    */
+    public static class Remove implements EtherOperation {
         private final UUID mTargetUUID;
         private final int mIndex;
 
-        private Remove(UUID uuid, int index) {
+        public Remove(UUID uuid, int index) {
             mTargetUUID = uuid;
             mIndex = index;
         }
@@ -142,6 +208,17 @@ public class ListNode extends AbstractNode {
             return this;
         }
 
+        public Remove(DataInputStream inputStream) throws IOException {
+            mTargetUUID = SerializationUtils.deserializeUUID(inputStream);
+            mIndex = inputStream.readInt();
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream outputStream) throws IOException {
+            SerializationUtils.serializeUUID(mTargetUUID, outputStream);
+            outputStream.writeInt(mIndex);
+        }
+
         private EtherOperation xformOverInsert(Insert remoteOperation) {
             if (!remoteOperation.mTargetUUID.equals(mTargetUUID)) {
                 return this;
@@ -163,29 +240,6 @@ public class ListNode extends AbstractNode {
                 return new Remove(mTargetUUID, mIndex - 1);
             }
             return this;
-        }
-    }
-
-    public static class ListNodeData implements NodeData {
-        private final UUID mUUID;
-        private final ImmutableList<ValueData> mValues;
-
-        public ListNodeData(ListNode node) {
-            mUUID = node.getUUID();
-            ImmutableList.Builder<ValueData> builder = ImmutableList.builder();
-            for (Value value : node.mValues) {
-                builder.add(value.serializeValue());
-            }
-            mValues = builder.build();
-        }
-
-        @Override
-        public Node recreate(GraphDelegate graphDelegate) {
-            ArrayList<Value> values = Lists.newArrayList();
-            for (ValueData valueData : mValues) {
-                values.add(valueData.recreate(graphDelegate));
-            }
-            return new ListNode(graphDelegate.getOperationDelegate(), mUUID, values);
         }
     }
 }

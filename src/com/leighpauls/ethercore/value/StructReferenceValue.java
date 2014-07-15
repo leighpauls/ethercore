@@ -2,7 +2,11 @@ package com.leighpauls.ethercore.value;
 
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.StructNode;
+import com.leighpauls.ethercore.util.SerializationUtils;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -44,7 +48,7 @@ public class StructReferenceValue extends AbstractValue {
         return new StructReferenceValueData(mUUID);
     }
 
-    private static class StructReferenceValueData implements ValueData {
+    public static class StructReferenceValueData implements ValueData {
         private final UUID mUUID;
         private StructReferenceValueData(UUID uuid) {
             mUUID = uuid;
@@ -53,6 +57,15 @@ public class StructReferenceValue extends AbstractValue {
         @Override
         public Value recreate(GraphDelegate graphDelegate) {
             return new StructReferenceValue(graphDelegate, mUUID);
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream output) throws IOException {
+            SerializationUtils.serializeUUID(mUUID, output);
+        }
+
+        public StructReferenceValueData(DataInputStream inputStream) throws IOException {
+            mUUID = SerializationUtils.deserializeUUID(inputStream);
         }
     }
 

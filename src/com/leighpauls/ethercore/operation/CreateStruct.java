@@ -2,7 +2,11 @@ package com.leighpauls.ethercore.operation;
 
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.StructNode;
+import com.leighpauls.ethercore.util.SerializationUtils;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -27,5 +31,14 @@ public class CreateStruct implements EtherOperation {
             boolean overrideRemote) {
         // creation never conflicts
         return this;
+    }
+
+    public CreateStruct(DataInputStream inputStream) throws IOException {
+        mUUID = SerializationUtils.deserializeUUID(inputStream);
+    }
+
+    @Override
+    public void serializeTypelessly(DataOutputStream outputStream) throws IOException {
+        SerializationUtils.serializeUUID(mUUID, outputStream);
     }
 }

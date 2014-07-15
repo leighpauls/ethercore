@@ -1,16 +1,11 @@
 package com.leighpauls.ethercore;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.leighpauls.ethercore.client.*;
+import com.leighpauls.ethercore.connection.ImmediateConnection;
 import com.leighpauls.ethercore.node.ListNode;
-import com.leighpauls.ethercore.node.Node;
 import com.leighpauls.ethercore.node.StructNode;
-import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.server.EtherServer;
 import com.leighpauls.ethercore.value.*;
-
-import java.util.UUID;
 
 public class Main {
     public static void main(String[] args) {

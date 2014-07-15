@@ -3,7 +3,11 @@ package com.leighpauls.ethercore;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.leighpauls.ethercore.operation.EtherOperation;
+import com.leighpauls.ethercore.operation.EtherOperationSerializer;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -13,6 +17,33 @@ import java.util.ArrayList;
 public class Transaction {
     private final Precedence mPrecedence;
     private final ImmutableList<EtherOperation> mOperations;
+
+    /**
+     * Writes this transaction to outputStream
+     * @param outputStream
+     */
+    public void serialize(DataOutputStream outputStream) throws IOException {
+        mPrecedence.serialize(outputStream);
+        outputStream.writeInt(mOperations.size());
+        for (EtherOperation operation : mOperations) {
+            EtherOperationSerializer.serialize(outputStream, operation);
+        }
+    }
+
+    /**
+     * Create a copy of the transaction using a data stream, written by serializeTypelessly()
+     * @param inputStream
+     * @throws IOException
+     */
+    public Transaction(DataInputStream inputStream) throws IOException {
+        mPrecedence = new Precedence(inputStream);
+        int numOperations = inputStream.readInt();
+        ImmutableList.Builder<EtherOperation> builder = ImmutableList.builder();
+        for (int i = 0; i < numOperations; i++) {
+            builder.add(EtherOperationSerializer.deserialize(inputStream));
+        }
+        mOperations = builder.build();
+    }
 
     public Transaction(Precedence precedence, ImmutableList<EtherOperation> operations) {
         mPrecedence = precedence;

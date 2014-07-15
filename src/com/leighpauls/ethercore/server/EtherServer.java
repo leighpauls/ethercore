@@ -56,7 +56,7 @@ public class EtherServer {
 
         UUID rootNodeUUID = client.getRootNodeUUID();
         if (!mNodes.containsKey(rootNodeUUID)) {
-            throw new EtherRuntimeException("Asked for a root node which dosn't exist");
+            throw new EtherRuntimeException("Asked for a root node which doesn't exist");
         }
 
         client.initialize(

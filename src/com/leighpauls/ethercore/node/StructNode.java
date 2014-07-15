@@ -6,10 +6,14 @@ import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.operation.EtherOperation;
 import com.leighpauls.ethercore.operation.NoOp;
+import com.leighpauls.ethercore.util.SerializationUtils;
 import com.leighpauls.ethercore.value.StructReferenceValue;
 import com.leighpauls.ethercore.value.Value;
 import com.leighpauls.ethercore.value.ValueData;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +57,7 @@ public class StructNode extends AbstractNode {
         getOperationDelegate().applyOperation(operation);
     }
     public void remove(String key) {
-        Remove operation = new Remove(getUUID(), key);
+        Clear operation = new Clear(getUUID(), key);
         getOperationDelegate().applyOperation(operation);
     }
 
@@ -62,6 +66,9 @@ public class StructNode extends AbstractNode {
         return new StructNodeData(this);
     }
 
+    /**
+     * Operation to put a value into a {@link StructNode}
+     */
     public static class Put implements EtherOperation {
         private final UUID mTargetUUID;
         private final String mKey;
@@ -97,13 +104,26 @@ public class StructNode extends AbstractNode {
             // I was overridden
             return new NoOp();
         }
+
+        public Put(DataInputStream inputStream) throws IOException {
+            mTargetUUID = SerializationUtils.deserializeUUID(inputStream);
+            mKey = SerializationUtils.deserializeString(inputStream);
+            mValueData = ValueDataSerializer.deserialize(inputStream);
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream outputStream) throws IOException {
+            SerializationUtils.serializeUUID(mTargetUUID, outputStream);
+            SerializationUtils.serializeString(mKey, outputStream);
+            ValueDataSerializer.serialize(mValueData, outputStream);
+        }
     }
 
-    public static class Remove implements EtherOperation {
+    public static class Clear implements EtherOperation {
         private final UUID mTargetUUID;
         private final String mKey;
 
-        public Remove(UUID uuid, String key) {
+        public Clear(UUID uuid, String key) {
             mTargetUUID = uuid;
             mKey = key;
         }
@@ -120,14 +140,25 @@ public class StructNode extends AbstractNode {
                 boolean overrideRemote) {
             if (remoteOperation instanceof Put) {
                 return xformOverPut((Put) remoteOperation);
-            } else if (remoteOperation instanceof Remove) {
-                return xformOverRemove((Remove) remoteOperation, overrideRemote);
+            } else if (remoteOperation instanceof Clear) {
+                return xformOverRemove((Clear) remoteOperation, overrideRemote);
             }
             // no conflict possible
             return this;
         }
 
-        private EtherOperation xformOverRemove(Remove remoteOperation, boolean overrideRemote) {
+        public Clear(DataInputStream inputStream) throws IOException {
+            mTargetUUID = SerializationUtils.deserializeUUID(inputStream);
+            mKey = SerializationUtils.deserializeString(inputStream);
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream outputStream) throws IOException {
+            SerializationUtils.serializeUUID(mTargetUUID, outputStream);
+            SerializationUtils.serializeString(mKey, outputStream);
+        }
+
+        private EtherOperation xformOverRemove(Clear remoteOperation, boolean overrideRemote) {
             if ((!remoteOperation.mTargetUUID.equals(mTargetUUID))
                     || (!remoteOperation.mKey.equals(mKey))
                     || (overrideRemote)) {
@@ -147,7 +178,7 @@ public class StructNode extends AbstractNode {
         }
     }
 
-    private static class StructNodeData implements NodeData {
+    public static class StructNodeData implements NodeData {
         private final UUID mUUID;
         private final ImmutableMap<String, ValueData> mValues;
 
@@ -159,6 +190,30 @@ public class StructNode extends AbstractNode {
                 builder.put(entry.getKey(), entry.getValue().serializeValue());
             }
             mValues = builder.build();
+        }
+
+        public StructNodeData(DataInputStream inputStream) throws IOException {
+            mUUID = SerializationUtils.deserializeUUID(inputStream);
+
+            int numValues = inputStream.readInt();
+            ImmutableMap.Builder<String, ValueData> builder = ImmutableMap.builder();
+            for (int i = 0; i < numValues; ++i) {
+                builder.put(
+                        SerializationUtils.deserializeString(inputStream),
+                        ValueDataSerializer.deserialize(inputStream));
+            }
+            mValues = builder.build();
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream output) throws IOException {
+            SerializationUtils.serializeUUID(mUUID, output);
+
+            output.writeInt(mValues.size());
+            for (Map.Entry<String, ValueData> valueDataEntry : mValues.entrySet()) {
+                SerializationUtils.serializeString(valueDataEntry.getKey(), output);
+                ValueDataSerializer.serialize(valueDataEntry.getValue(), output);
+            }
         }
 
         @Override

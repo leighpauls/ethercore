@@ -2,7 +2,11 @@ package com.leighpauls.ethercore.operation;
 
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.ListNode;
+import com.leighpauls.ethercore.util.SerializationUtils;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -27,5 +31,14 @@ public class CreateList implements EtherOperation {
             boolean overrideRemote) {
         // creation never conflicts
         return this;
+    }
+
+    public CreateList(DataInputStream inputStream) throws IOException {
+        mUUID = SerializationUtils.deserializeUUID(inputStream);
+    }
+
+    @Override
+    public void serializeTypelessly(DataOutputStream outputStream) throws IOException {
+        SerializationUtils.serializeUUID(mUUID, outputStream);
     }
 }

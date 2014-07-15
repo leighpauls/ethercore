@@ -2,7 +2,11 @@ package com.leighpauls.ethercore.value;
 
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.ListNode;
+import com.leighpauls.ethercore.util.SerializationUtils;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -52,8 +56,9 @@ public class ListReferenceValue extends AbstractValue {
         return new ListReferenceValueData(mUUID);
     }
 
-    private static class ListReferenceValueData implements ValueData {
+    public static class ListReferenceValueData implements ValueData {
         private final UUID mUUID;
+
         private ListReferenceValueData(UUID uuid) {
             mUUID = uuid;
         }
@@ -61,6 +66,15 @@ public class ListReferenceValue extends AbstractValue {
         @Override
         public Value recreate(GraphDelegate graphDelegate) {
             return new ListReferenceValue(graphDelegate, mUUID);
+        }
+
+        @Override
+        public void serializeTypelessly(DataOutputStream output) throws IOException {
+            SerializationUtils.serializeUUID(mUUID, output);
+        }
+
+        public ListReferenceValueData(DataInputStream inputStream) throws IOException {
+            mUUID = SerializationUtils.deserializeUUID(inputStream);
         }
     }
 }

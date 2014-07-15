@@ -1,6 +1,11 @@
 package com.leighpauls.ethercore.value;
 
 import com.leighpauls.ethercore.GraphDelegate;
+import com.leighpauls.ethercore.util.SerializationUtils;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
  * String implementation of an ether value
@@ -31,4 +36,14 @@ public class StringValue extends AbstractValue implements ValueData {
     public Value recreate(GraphDelegate graphDelegate) {
         return this;
     }
+
+    @Override
+    public void serializeTypelessly(DataOutputStream output) throws IOException {
+        SerializationUtils.serializeString(mValue, output);
+    }
+
+    public StringValue(DataInputStream inputStream) throws IOException {
+        mValue = SerializationUtils.deserializeString(inputStream);
+    }
+
 }

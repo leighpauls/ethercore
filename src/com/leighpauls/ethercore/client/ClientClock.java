@@ -2,6 +2,10 @@ package com.leighpauls.ethercore.client;
 
 import com.google.common.base.Objects;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 /**
  * Vector-clock from a clients perspective, understanding only local and non-local states (rather
  * than every local state)
@@ -45,4 +49,15 @@ public class ClientClock {
     public ClientClock nextRemoteState() {
         return new ClientClock(mLocalState, mRemoteState + 1);
     }
+
+    public void serialize(DataOutputStream outputStream) throws IOException {
+        outputStream.writeInt(mLocalState);
+        outputStream.writeInt(mRemoteState);
+    }
+
+    public ClientClock(DataInputStream inputStream) throws IOException {
+        mLocalState = inputStream.readInt();
+        mRemoteState = inputStream.readInt();
+    }
+
 }

@@ -1,5 +1,6 @@
-package com.leighpauls.ethercore;
+package com.leighpauls.ethercore.connection;
 
+import com.leighpauls.ethercore.OperationDelegate;
 import com.leighpauls.ethercore.client.ClientInitializer;
 import com.leighpauls.ethercore.client.ClientNetworkListener;
 import com.leighpauls.ethercore.client.ClientTransaction;

@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.UUID;
 
 /**
- * Serialize and deserialize nodes
+ * Serialize and deserialize nodes to/from their container class copies
  */
 public class NodeSerializer {
     public static ImmutableSet<NodeData> serializeNodes(Collection<Node> nodes) {
