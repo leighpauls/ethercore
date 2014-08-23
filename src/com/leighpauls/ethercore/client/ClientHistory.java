@@ -48,7 +48,9 @@ public class ClientHistory {
                     "Got a remote transaction from an unknown source state");
         }
 
-        mLatestRemoteEndState.applyRemoteTransaction(remoteTransaction.getTransaction());
+        mLatestRemoteEndState.applyRemoteTransaction(
+                remoteTransaction.getTransaction(),
+                new ClientState(mLatestRemoteEndState.getClock().nextRemoteState()));
         ClientState transformationSource = mLatestRemoteEndState;
         mLatestRemoteEndState = mLatestRemoteEndState.getRemoteTransition().getEndState();
 
@@ -63,12 +65,19 @@ public class ClientHistory {
                             remoteTransition.getTransaction())
             );
 
-            // apply the transformed transactions
-            localTransition.getEndState().applyRemoteTransaction(transformedPair.remote);
-            remoteTransition.getEndState().applyLocalTransaction(transformedPair.local);
+            // make a new end state for both paths of the transform to meet at
+            ClientState nextLocalState = localTransition.getEndState();
+            ClientState transformEndState =
+                    new ClientState(nextLocalState.getClock().nextRemoteState());
+
+            // apply the transformations to both sides of the transformation diamond
+            nextLocalState.applyRemoteTransaction(transformedPair.remote, transformEndState);
+            remoteTransition
+                    .getEndState()
+                    .applyLocalTransaction(transformedPair.local, transformEndState);
 
             // next iteration
-            transformationSource = localTransition.getEndState();
+            transformationSource = nextLocalState;
         }
 
         mLastAppliedState = mLastAppliedState.getRemoteTransition().getEndState();
@@ -81,7 +90,9 @@ public class ClientHistory {
      * @param transaction The local transaction to apply
      */
     public void applyLocalTransaction(Transaction transaction) {
-        mLastAppliedState.applyLocalTransaction(transaction);
+        mLastAppliedState.applyLocalTransaction(
+                transaction,
+                new ClientState(mLastAppliedState.getClock().nextLocalState()));
         mLastAppliedState = mLastAppliedState.getLocalTransition().getEndState();
     }
 

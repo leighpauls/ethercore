@@ -152,7 +152,7 @@ public class ListNode extends AbstractNode {
         }
 
         private EtherOperation xformOverInsert(Insert remoteOperation, boolean overrideRemote) {
-            if (!remoteOperation.mTargetUUID.equals(remoteOperation.mTargetUUID)) {
+            if (!remoteOperation.mTargetUUID.equals(mTargetUUID)) {
                 return this;
             }
             if (remoteOperation.mIndex < mIndex
@@ -202,7 +202,7 @@ public class ListNode extends AbstractNode {
             if (remoteOperation instanceof Insert) {
                 return xformOverInsert((Insert) remoteOperation);
             } else if (remoteOperation instanceof Remove) {
-                return xformOverRemove((Remove) remoteOperation, overrideRemote);
+                return xformOverRemove((Remove) remoteOperation);
             }
             // no conflict possible
             return this;
@@ -229,12 +229,12 @@ public class ListNode extends AbstractNode {
             return this;
         }
 
-        private EtherOperation xformOverRemove(Remove remoteOperation, boolean overrideRemote) {
+        private EtherOperation xformOverRemove(Remove remoteOperation) {
             if (!remoteOperation.mTargetUUID.equals(mTargetUUID)) {
                 return this;
             }
             if (remoteOperation.mIndex == mIndex) {
-                return overrideRemote ? this : new NoOp();
+                return new NoOp();
             }
             if (remoteOperation.mIndex < mIndex) {
                 return new Remove(mTargetUUID, mIndex - 1);

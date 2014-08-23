@@ -29,18 +29,24 @@ public class ClientState {
         return mRemoteTransition;
     }
 
-    public void applyRemoteTransaction(Transaction transaction) {
+    public void applyRemoteTransaction(Transaction transaction, ClientState newEndState) {
         if (mRemoteTransition != null) {
             throw new EtherRuntimeException("Tried to overwrite a remote transaction");
         }
-        mRemoteTransition = new Transition(transaction, new ClientState(mClock.nextRemoteState()));
+        if (!newEndState.getClock().equals(mClock.nextRemoteState())) {
+            throw new EtherRuntimeException("Tried to skip a state");
+        }
+        mRemoteTransition = new Transition(transaction, newEndState);
     }
 
-    public void applyLocalTransaction(Transaction transaction) {
+    public void applyLocalTransaction(Transaction transaction, ClientState newEndState) {
         if (mLocalTransition != null) {
             throw new EtherRuntimeException("Tried to overwrite a local transaction");
         }
-        mLocalTransition = new Transition(transaction, new ClientState(mClock.nextLocalState()));
+        if (!newEndState.getClock().equals(mClock.nextLocalState())) {
+            throw new EtherRuntimeException("Tried to skip a state");
+        }
+        mLocalTransition = new Transition(transaction, newEndState);
     }
 
     public static class Transition {

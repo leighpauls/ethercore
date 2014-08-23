@@ -68,6 +68,10 @@ public class EtherServer {
                 new NetworkDelegate(clientUUID));
     }
 
+    public Node getNode(UUID nodeUuid) {
+        return mNodes.get(nodeUuid);
+    }
+
     public class NetworkDelegate {
         private final UUID mClientUUID;
         private NetworkDelegate (UUID clientUUID) {
