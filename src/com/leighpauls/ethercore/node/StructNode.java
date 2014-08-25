@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore.node;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.leighpauls.ethercore.GraphDelegate;
@@ -225,6 +226,18 @@ public class StructNode extends AbstractNode {
                         valueDataEntry.getValue().recreate(graphDelegate));
             }
             return new StructNode(graphDelegate.getOperationDelegate(), mUUID, values);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(mUUID, mValues);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof StructNodeData
+                    && Objects.equal(mUUID, ((StructNodeData) other).mUUID)
+                    && Objects.equal(mValues, ((StructNodeData) other).mValues);
         }
     }
 }

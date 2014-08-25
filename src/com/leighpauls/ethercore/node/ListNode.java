@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore.node;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.leighpauls.ethercore.GraphDelegate;
@@ -102,6 +103,18 @@ public class ListNode extends AbstractNode {
             for (ValueData value : mValues) {
                 ValueDataSerializer.serialize(value, output);
             }
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(mUUID, mValues);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof ListNodeData
+                    && Objects.equal(mUUID, ((ListNodeData) other).mUUID)
+                    && Objects.equal(mValues, ((ListNodeData) other).mValues);
         }
     }
 

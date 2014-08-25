@@ -107,6 +107,11 @@ public class EtherClient {
         mNetworkListener.sendTransaction(pendingTransaction);
     }
 
+    // TODO: expose only for testing
+    public HashMap<UUID, Node> getNodes() {
+        return mNodes;
+    }
+
     private class ClientOperationDelegate implements OperationDelegate {
         private ClientOperationDelegate() {}
 

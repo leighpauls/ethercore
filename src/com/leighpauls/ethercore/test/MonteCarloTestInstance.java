@@ -13,10 +13,7 @@ import com.leighpauls.ethercore.server.EtherServer;
 import com.leighpauls.ethercore.value.*;
 import com.sun.tools.javac.util.Pair;
 
-import java.util.ArrayList;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * A single montecarlo run
@@ -85,8 +82,13 @@ public class MonteCarloTestInstance implements Runnable {
             }
         } while (!done);
 
-        // TODO: compare the server copy against all the clients
-        GraphCrawlingPrinter.printGraph(server.getNode(EtherServer.GOD_NODE_UUID), 5);
+        // compare the server copy against all the clients
+        HashMap<UUID, Node> serverGraph = server.getNodes();
+        for (Pair<EtherClient, QueueConnection> connection : connections) {
+            if (!areGraphsIdentical(serverGraph, connection.fst.getNodes())) {
+                throw new EtherRuntimeException("Server didn't match: " + connection);
+            }
+        }
     }
 
     private static class RandomTransaction implements EtherTransactionInterface {
@@ -215,5 +217,20 @@ public class MonteCarloTestInstance implements Runnable {
                 }
             }
         }
+    }
+
+    private static boolean areGraphsIdentical(Map<UUID, Node> a, Map<UUID, Node> b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (Map.Entry<UUID, Node> aEntry : a.entrySet()) {
+            if (!b.containsKey(aEntry.getKey())) {
+                return false;
+            }
+            if (!aEntry.getValue().serializeNode().equals(b.get(aEntry.getKey()).serializeNode())) {
+                return false;
+            }
+        }
+        return true;
     }
 }

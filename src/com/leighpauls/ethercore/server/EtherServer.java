@@ -18,7 +18,6 @@ import java.util.UUID;
  * Object that contains the entire server state, and initiates communication with clients
  */
 public class EtherServer {
-
     private final HashMap<UUID, Node> mNodes;
     private final HashMap<UUID, PersistentNetworkClient> mClients;
     private final ServerHistory mHistory;
@@ -70,6 +69,11 @@ public class EtherServer {
 
     public Node getNode(UUID nodeUuid) {
         return mNodes.get(nodeUuid);
+    }
+
+    // TODO: expose only for testing
+    public HashMap<UUID, Node> getNodes() {
+        return mNodes;
     }
 
     public class NetworkDelegate {

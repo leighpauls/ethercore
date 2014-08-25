@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore.value;
 
+import com.google.common.base.Objects;
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.StructNode;
 import com.leighpauls.ethercore.util.SerializationUtils;
@@ -66,6 +67,17 @@ public class StructReferenceValue extends AbstractValue {
 
         public StructReferenceValueData(DataInputStream inputStream) throws IOException {
             mUUID = SerializationUtils.deserializeUUID(inputStream);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(mUUID);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof StructReferenceValueData
+                    && Objects.equal(mUUID, ((StructReferenceValueData) obj).mUUID);
         }
     }
 

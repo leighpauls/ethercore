@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore.value;
 
+import com.google.common.base.Objects;
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.node.ListNode;
 import com.leighpauls.ethercore.util.SerializationUtils;
@@ -75,6 +76,17 @@ public class ListReferenceValue extends AbstractValue {
 
         public ListReferenceValueData(DataInputStream inputStream) throws IOException {
             mUUID = SerializationUtils.deserializeUUID(inputStream);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(mUUID);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof ListReferenceValueData
+                    && Objects.equal(mUUID, ((ListReferenceValueData) other).mUUID);
         }
     }
 }

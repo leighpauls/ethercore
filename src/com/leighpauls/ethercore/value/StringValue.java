@@ -1,5 +1,6 @@
 package com.leighpauls.ethercore.value;
 
+import com.google.common.base.Objects;
 import com.leighpauls.ethercore.GraphDelegate;
 import com.leighpauls.ethercore.util.SerializationUtils;
 
@@ -46,4 +47,14 @@ public class StringValue extends AbstractValue implements ValueData {
         mValue = SerializationUtils.deserializeString(inputStream);
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(mValue);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof StringValue && mValue == ((StringValue) obj).mValue;
+
+    }
 }
